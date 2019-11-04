@@ -1,112 +1,136 @@
 pragma solidity ^0.5.0;
-// written for Solidity version 0.4.18 and above that doesnt break functionality
+//NOTES:employee(admin/not) and evidence(validate/not)
 
 contract Fyp {
 
-    string public name; 
+    //for dapp name at constructor
+    string public name;
+
+    //for checking admin or not
+    bool public _admin;
+
+    //count total of objects currently
+    uint public employeeCount = 0;
+    uint public evidenceCount = 0;
+
+    //refers to struct object, mapping for identification/differentiate
+    mapping(uint => Employee) public employees;
+    mapping(uint => Evidence) public evidences; 
+
+    //struct for each objects variables
+    struct Employee {
+        uint employeeId;
+        string employeeName;        
+        address payable user;
+        bool admin;
+        bool isEmployee;
+    }
+    struct Evidence {
+        uint evidenceId;
+        string evidenceName;
+        address payable author;
+        address payable adminVerify;
+        bool verify;
+    }
+
+    //event or trigger to be used when called, below events create objects
+    event EmployeeCreated(
+        uint employeeId,
+        string employeeName,        
+        address payable user,
+        bool admin,
+        bool isEmployee                 
+    );
+    event EvidenceCreated(
+        uint evidenceId,
+        string evidenceName,
+        address payable author,
+        address payable adminVerify,
+        bool verify
+    );
+
+    //event or trigger to be used when called, below events validate/verify objects
+    event EmployeeEmployed(
+        uint employeeId,
+        string employeeName,        
+        address payable user,
+        bool admin,
+        bool isEmployee                 
+    );
+    event EvidenceVerified(
+        uint evidenceId,
+        string evidenceName,
+        address payable author,
+        address payable adminVerify,
+        bool verify
+    );
+
+    //name of dapp
     constructor() public {
         name = "UMU WIP";
     }
 
-    // an event that is called whenever a data is added so the frontend could
-    // appropriately display the data with the right element id (it is used
-    // to show all the data, since it is one of arguments for the below function)
-    event AddedEmployee(uint employeeID);
-    event AddedEvidence(uint evidenceID);
-
-    // describes user, which has an id and the ID of the evidence
-    address owner;
-    function _Fyp()public {
-        owner=msg.sender;
-    }
-    modifier onlyOwner {
-        require(msg.sender == owner);
-        _;
-    }
-
-    //describe employee
-    struct Employee {
-        uint eid; // bytes32 type are basically strings
-        string isAdmin;//check if admin
-    }
-    //describe evidence
-    struct Evidence {
-        uint id;
-        string name; 
-    }
-
-    // These state variables are used keep track of the number of employee/evidence 
-    // and used to as a way to index them     
-    uint public numEmployees; // declares a state variable
-    uint numEvidences;
-
-    
-    // Think of these as a hash table, with the key as a uint and value of 
-    // the struct employee/evidence. These mappings will be used in the majority
-    // of our transactions/calls
-    // These mappings will hold all the employee/evidence respectively
-    mapping (uint => Employee) public employees;
-    mapping (uint => Evidence) evidences;
-    
-    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-     *  These functions perform transactions, editing the mappings *
-     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-     //add employee
-     function addEmployee(uint _eid, string memory _admin) onlyOwner public {
-        // employeeID is the return variable
-        uint employeeID = numEmployees++;
-        // Create new employee Struct with id and saves it to storage.
-        employees[employeeID] = Employee(_eid,_admin);
-        emit AddedEmployee(employeeID);
-    }
-    //add evidence
-    function addEvidence(uint _id, string memory _name) onlyOwner public {
-        // evidenceID is the return variable
-        uint evidenceID = numEvidences++;
-        // Create new evidence Struct with id and saves it to storage.
-        evidences[evidenceID] = Evidence(_id,_name);
-        emit AddedEvidence(evidenceID);
-    }
-
-    /* * * * * * * * * * * * * * * * * * * * * * * * * * 
-     *  Getter Functions, marked by the key word "view" *
-     * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-     //shows the total of employees/evidences
-    function getNumEmployees() public view returns(uint) {
-        return numEmployees;
-    }
-    function getNumEvidences() public view returns(uint) {
-        return numEvidences;
-    }
-
-    // returns evidences information, including its ID and name
-    function getEvidences(uint _evidenceID) public view returns (uint, uint, string memory) {
-        return (_evidenceID,evidences[_evidenceID].id,evidences[_evidenceID].name);
-    }
-
-    /* * * * * * * * * * * * * * * * * * * * *  
-     *  Functions used for validating logins *
-     * * * * * * * * * * * * * * * * * * * * */
-    //check for user validation
-    function validateUser(uint _eid) public view returns (bool) {
-        bool exist = false;
-        for (uint i = 0; i < numEmployees; i++){
-            //if exist, returns true
-            if (employees[i].eid == _eid) {
-                exist = true;
-            }
+    //function for creating the objects
+    function createEmployee(string memory _name, address payable _employee, uint _isAdmin) public {
+        //require name
+        require(bytes(_name).length > 0);
+        //require employee address
+        //require(!_employee);
+        //require admin to be set either 0 = false or 1 = true
+        require(_isAdmin >= 0 && _isAdmin <= 1);
+        employeeCount ++;       
+        //check either admin or not
+        if (_isAdmin == 0) {
+            //not admin
+            _admin = false;         
         }
-    }
-    //check for admin validation
-    function validateAdmin(string memory _isAdmin) public view returns (bool) {
-        bool admin = false;
-        for (uint i = 0; i < numEmployees; i++){
-            //if exist, returns true
-            if (keccak256(abi.encodePacked((employees[i].isAdmin))) == keccak256(abi.encodePacked((_isAdmin))) ) {
-                admin = true;
-            }
+        else {
+            //is admin
+            _admin = true;
         }
+        //Create employee
+        employees[employeeCount] = Employee(employeeCount, _name, _employee, _admin, true);
+        //trigger event
+        emit EmployeeCreated(employeeCount, _name, _employee, _admin, true);
     }
+    function createEvidence(string memory _name) public {
+        //require name
+        require(bytes(_name).length > 0);       
+        evidenceCount ++;
+        //Create evidence
+        evidences[evidenceCount] = Evidence(evidenceCount, _name, msg.sender, msg.sender, false);
+        //trigger event
+        emit EvidenceCreated(evidenceCount, _name, msg.sender, msg.sender, false);
+    }   
+
+    //function to verify evidence
+    function verifyEvidence(uint _id) public payable {
+        //fetch evidence
+        Evidence memory _evidence = evidences[_id];
+
+        //fetch user
+        address payable _user = _evidence.author;
+
+        //evidence has valid id
+        require(_evidence.evidenceId > 0 && _evidence.evidenceId <= evidenceCount);     
+
+        //evidence not yet verify
+        require(!_evidence.verify);
+
+        //require admin not user
+        require(_user != msg.sender);
+
+        //transfer ownership
+        _evidence.adminVerify = msg.sender;
+
+        //mark as verify
+        _evidence.verify = true;
+
+        //update evidence
+        evidences[_id] = _evidence;     
+
+        //trigger event
+        emit EvidenceVerified(evidenceCount, _evidence.evidenceName, _evidence.author, msg.sender, true);
+    }
+
 }
